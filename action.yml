@@ -57,13 +57,14 @@ runs:
           --icon-url "${{ inputs.icon-url }}" \
           --icon-scale "${{ inputs.icon-scale }}" \
           --count "${{ inputs.count }}" \
-          --output "${{ inputs.output }}"
+          --output "${{ inputs.output }}" \
+          --flag-output "$(dirname "${{ inputs.output }}")/flag.svg"
 
     - name: Commit SVG if changed
       shell: bash
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add "${{ inputs.output }}" "flag.svg"
+        git add "${{ inputs.output }}" "$(dirname "${{ inputs.output }}")/flag.svg"
         git diff --cached --quiet || git commit -m "Update contributor flag SVG"
         git push
