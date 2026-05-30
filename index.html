@@ -61,7 +61,7 @@ input[type=range]{width:100%;accent-color:#58a6ff}
 <header>
   <h1 id="title">North Korea Flag Generator</h1>
   <div class="header-right">
-    <span id="subtitle">Generate contributor flag SVGs for your GitHub README</span>
+    <a href="https://github.com/JoyinJoester/North-Korea-Flag" target="_blank" class="btn" style="text-decoration:none;font-size:12px">GitHub</a>
     <button class="lang-btn" id="langEN" onclick="setLang('en')">EN</button>
     <button class="lang-btn" id="langZH" onclick="setLang('zh')">中文</button>
   </div>
@@ -73,6 +73,17 @@ input[type=range]{width:100%;accent-color:#58a6ff}
   </div>
 
   <div class="controls">
+    <div class="section">
+      <h3 id="secRepo">REPOSITORY</h3>
+      <div class="field">
+        <div class="fetch-row">
+          <input type="text" id="repoUrl" placeholder="https://github.com/owner/repo or owner/repo">
+          <button class="btn btn-primary" id="btnGenerate" onclick="quickGenerate()">Generate</button>
+        </div>
+        <div class="msg" id="repoMsg"></div>
+      </div>
+    </div>
+
     <div class="section">
       <h3 id="secColors">COLORS</h3>
       <div class="field">
@@ -159,7 +170,7 @@ input[type=range]{width:100%;accent-color:#58a6ff}
 const I18N = {
   en: {
     title: 'North Korea Flag Generator',
-    subtitle: 'Generate contributor flag SVGs for your GitHub README',
+    secRepo: 'REPOSITORY',
     secColors: 'COLORS',
     lblBlue: 'Blue (top/bottom stripes)',
     lblRed: 'Red (center stripe)',
@@ -184,10 +195,11 @@ const I18N = {
     avatar: 'Avatar',
     lblShape: 'Avatar Shape',
     lblShowText: 'Show name & commits',
+    phRepoUrl: 'https://github.com/owner/repo or owner/repo',
   },
   zh: {
     title: '朝鲜国旗生成器',
-    subtitle: '为 GitHub README 生成带贡献者的旗帜 SVG',
+    secRepo: '仓库',
     secColors: '颜色',
     lblBlue: '蓝色（上下条纹）',
     lblRed: '红色（中间条纹）',
@@ -212,6 +224,7 @@ const I18N = {
     avatar: '头像',
     lblShape: '头像形状',
     lblShowText: '显示姓名和提交数',
+    phRepoUrl: 'https://github.com/用户名/仓库名 或 用户名/仓库名',
   }
 };
 
@@ -222,7 +235,8 @@ function setLang(l) {
   document.getElementById('langEN').className = 'lang-btn' + (l === 'en' ? ' active' : '');
   document.getElementById('langZH').className = 'lang-btn' + (l === 'zh' ? ' active' : '');
   document.getElementById('title').textContent = t('title');
-  document.getElementById('subtitle').textContent = t('subtitle');
+  document.getElementById('secRepo').textContent = t('secRepo');
+  document.getElementById('repoUrl').placeholder = t('phRepoUrl');
   document.getElementById('secColors').textContent = t('secColors');
   document.getElementById('lblBlue').textContent = t('lblBlue');
   document.getElementById('lblRed').textContent = t('lblRed');
@@ -495,6 +509,55 @@ function pickAvatar(btn) {
 }
 
 // --- Fetch from GitHub ---
+function parseRepo(input) {
+  input = input.trim();
+  // Handle full URLs like https://github.com/owner/repo
+  const urlMatch = input.match(/github\.com\/([^\/]+\/[^\/\s#?]+)/);
+  if (urlMatch) return urlMatch[1];
+  // Handle owner/repo format
+  if (/^[^\/\s]+\/[^\/\s]+$/.test(input)) return input;
+  return '';
+}
+
+async function quickGenerate() {
+  const raw = document.getElementById('repoUrl').value;
+  const repo = parseRepo(raw);
+  const msg = document.getElementById('repoMsg');
+  if (!repo) {
+    msg.className = 'msg error';
+    msg.textContent = t('errEnter');
+    return;
+  }
+  document.getElementById('repoInput').value = repo;
+  msg.className = 'msg';
+  msg.textContent = t('fetching');
+  try {
+    const resp = await fetch(`https://api.github.com/repos/${repo}/contributors?per_page=6`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    const users = data.filter(c => c.type === 'User');
+    document.getElementById('contributors').innerHTML = '';
+    for (const u of users) {
+      let avatarSrc = '';
+      try {
+        const imgResp = await fetch(`https://github.com/${u.login}.png?size=96`);
+        const blob = await imgResp.blob();
+        avatarSrc = await new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onload = e => resolve(e.target.result);
+          reader.readAsDataURL(blob);
+        });
+      } catch (_) {}
+      addContributor(u.login, u.contributions, avatarSrc);
+    }
+    msg.className = 'msg success';
+    msg.textContent = t('loaded')(users.length);
+  } catch (e) {
+    msg.className = 'msg error';
+    msg.textContent = t('errFetch')(e.message);
+  }
+}
+
 async function fetchRepo() {
   const repo = document.getElementById('repoInput').value.trim();
   const msg = document.getElementById('fetchMsg');
@@ -573,6 +636,9 @@ function downloadPNG() {
 // --- Init ---
 setLang('en');
 render();
+document.getElementById('repoUrl').addEventListener('keydown', e => {
+  if (e.key === 'Enter') quickGenerate();
+});
 </script>
 </body>
 </html>
