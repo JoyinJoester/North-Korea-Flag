@@ -10,10 +10,10 @@ A GitHub Action that generates a configurable North Korea flag SVG with your pro
 
 ## What This Does
 
-This action automatically generates an SVG image that looks like the North Korea national flag, but with two customizations:
+This action automatically generates an SVG image that looks like the North Korea national flag, with two customizations:
 
-1. **The star can be replaced** with your project's logo/icon
-2. **The top contributors** (by commit count) are shown as circular avatars on the red stripe
+1. **Replace the star** with your project's logo/icon (or keep the default red star)
+2. **Display top contributors** (by commit count) on the red stripe with customizable avatar shapes
 
 The SVG updates automatically every week, so the contributor list stays current.
 
@@ -42,7 +42,22 @@ The SVG updates automatically every week, so the contributor list stays current.
 ```
 
 - **Left side**: White disc with your icon (or a red star by default)
-- **Right side**: Top contributors' GitHub avatars, automatically clipped into circles, with their username and commit count below
+- **Right side**: Top contributors' avatars with their username and commit count
+
+---
+
+## Web Configurator
+
+Don't want to configure GitHub Actions? Use the **[online generator](https://joyinjoester.github.io/North-Korea-Flag/)** to visually configure and preview your flag, then download as SVG or PNG.
+
+Features:
+- Live preview with instant updates
+- Color pickers for all stripe colors
+- Custom icon upload with scale control
+- Multiple avatar shapes: circle, square, passport (3:4), portrait (2:3), and more
+- Option to hide contributor text
+- Fetch contributors directly from any public GitHub repository
+- Export as SVG or high-resolution PNG
 
 ---
 
@@ -66,7 +81,7 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: JoyinJoester/North-Korea-Flag@main
         with:
@@ -79,14 +94,14 @@ jobs:
 
 Go to your repo → **Actions** tab → click **Update Contributor Flag** → **Run workflow**.
 
-Wait about 30 seconds for it to complete. It will create a `North Korea/output.svg` file in your repo.
+Wait about 30 seconds for it to complete. It will create a `output.svg` file in your repo.
 
 ### Step 3: Add to your README
 
 In your `README.md`, add this line where you want the flag to appear:
 
 ```markdown
-![Contributors](North-Korea-Flag/output.svg)
+![Contributors](output.svg)
 ```
 
 That's it! The flag will update automatically every week.
@@ -118,7 +133,7 @@ Change the flag stripe colors to match your project's theme:
     white: '#ffffff'    # white
 ```
 
-Color values are in hex format (e.g. `#FF0000` for red). You can use any hex color picker online to find the right values.
+Color values are in hex format (e.g. `#FF0000` for red). Use any online color picker to find the right values.
 
 ### Custom icon (replacing the star)
 
@@ -131,12 +146,44 @@ Replace the red star with your project's logo:
     icon-url: 'https://raw.githubusercontent.com/owner/repo/main/icon.png'
 ```
 
-**Important notes about the icon**:
-- The image must be accessible via a public URL
-- Any shape will be automatically clipped into a circle
-- For best results, use a square image (e.g. 256×256 or 512×512)
-- GitHub raw URLs work well: `https://raw.githubusercontent.com/owner/repo/branch/path/to/icon.png`
-- The icon scale defaults to 0.8 (80% of the disc). Set `icon-scale: '1.0'` to fill the entire disc
+**Icon notes**:
+- Must be a publicly accessible image URL
+- Any shape is auto-clipped into a circle
+- Square images work best (e.g. 256×256 or 512×512)
+- Scale defaults to 0.8 (80% of disc). Set `icon-scale: '1.0'` to fill the entire disc
+
+### Avatar shapes
+
+By default, contributor avatars are displayed as circles. You can change the shape:
+
+```yaml
+- uses: JoyinJoester/North-Korea-Flag@main
+  with:
+    repo: 'owner/repo'
+    shape: '3:4'    # passport photo ratio
+```
+
+Available shapes:
+
+| Shape | Description |
+|-------|-------------|
+| `circle` | Default circular avatars |
+| `roundrect` | Rounded rectangle (square ratio) |
+| `1:1` | Square |
+| `3:4` | Passport photo ratio |
+| `2:3` | Portrait ratio |
+| `4:5` | Photo ratio |
+
+### Hide contributor text
+
+Show only avatars without names or commit counts:
+
+```yaml
+- uses: JoyinJoester/North-Korea-Flag@main
+  with:
+    repo: 'owner/repo'
+    no-text: 'true'
+```
 
 ### Full example with all options
 
@@ -150,7 +197,9 @@ Replace the red star with your project's logo:
     icon-url: 'https://raw.githubusercontent.com/owner/repo/main/logo.png'
     icon-scale: '0.8'
     count: '5'
-    output: 'North Korea/output.svg'
+    shape: 'circle'
+    no-text: ''
+    output: 'output.svg'
 ```
 
 ---
@@ -159,55 +208,60 @@ Replace the red star with your project's logo:
 
 | Parameter | Required | Description | Default |
 |-----------|----------|-------------|---------|
-| `repo` | No | GitHub repository in `owner/repo` format. If not set, uses the current repository. | `${{ github.repository }}` |
+| `repo` | No | GitHub repository in `owner/repo` format. Uses current repo if not set. | `${{ github.repository }}` |
 | `blue` | No | Hex color for the top and bottom blue stripes | `#024FA2` |
 | `red` | No | Hex color for the center red stripe | `#ED1C27` |
 | `white` | No | Hex color for the thin white stripes and disc | `#FFFFFF` |
-| `icon-url` | No | Public URL of an image to replace the red star. Any shape is auto-clipped to a circle. | Red 5-pointed star |
-| `icon-scale` | No | How large the icon is relative to the white disc (0.0 to 1.0) | `0.8` |
-| `count` | No | Number of top contributors to display on the flag | `3` |
-| `output` | No | Path where the generated SVG will be saved | `North Korea/output.svg` |
-
----
-
-## How It Works
-
-1. The action fetches the top contributors from the GitHub API (sorted by total commit count)
-2. It generates an SVG with the flag stripes, the icon/star, and circular avatar images
-3. Avatar images are loaded directly from GitHub's CDN (`github.com/username.png`) — no downloads needed
-4. The SVG is committed to your repository automatically
-5. Your README references the SVG file, which GitHub renders inline
-
-### What gets committed?
-
-Only two files are created/updated in your repo:
-- `North Korea/output.svg` — the main composite image (flag + contributors)
-- `North Korea/flag.svg` — standalone flag (for separate use)
+| `icon-url` | No | Public image URL to replace the red star. Any shape auto-clipped to circle. | Red 5-pointed star |
+| `icon-scale` | No | Icon size relative to the white disc (0.0 to 1.0) | `0.8` |
+| `count` | No | Number of top contributors to display | `3` |
+| `shape` | No | Avatar shape: `circle`, `roundrect`, `1:1`, `3:4`, `2:3`, `4:5` | `circle` |
+| `no-text` | No | Set to `true` to hide contributor name and commit count | (empty) |
+| `output` | No | Path where the generated SVG will be saved | `output.svg` |
 
 ---
 
 ## Standalone Usage (Without GitHub Actions)
 
-If you prefer to run the script locally or in a different CI system:
+Run locally or in other CI systems:
 
 ```bash
 # Basic usage
-python "North-Korea-Flag/generate.py" --repo owner/repo
+python generate.py --repo owner/repo
 
-# With custom colors
-python "North-Korea-Flag/generate.py" --repo owner/repo --blue "#0055aa" --red "#cc0000"
+# Custom colors
+python generate.py --repo owner/repo --blue "#0055aa" --red "#cc0000"
 
-# With a custom icon
-python "North-Korea-Flag/generate.py" --repo owner/repo --icon-url "https://example.com/icon.png"
+# With custom icon
+python generate.py --repo owner/repo --icon-url "https://example.com/icon.png"
 
-# Show 5 contributors instead of 3
-python "North-Korea-Flag/generate.py" --repo owner/repo --count 5
+# Show 5 contributors
+python generate.py --repo owner/repo --count 5
+
+# Passport photo shape, no text
+python generate.py --repo owner/repo --shape 3:4 --no-text
 
 # Custom output path
-python "North-Korea-Flag/generate.py" --repo owner/repo --output "./my-flag.svg"
+python generate.py --repo owner/repo --output "./my-flag.svg"
 ```
 
-Requirements: Python 3.7+ (no pip packages needed — uses only stdlib).
+Requirements: Python 3.7+ (no pip packages needed — stdlib only).
+
+---
+
+## How It Works
+
+1. Fetches top contributors from the GitHub API (sorted by total commit count)
+2. Downloads avatar images and embeds them as base64 data URIs in the SVG
+3. Generates the flag with stripes, icon/star, and contributor avatars
+4. SVG is committed to your repository automatically
+5. README references the SVG file, which GitHub renders inline
+
+### What gets committed?
+
+Only two files are created/updated in your repo:
+- `output.svg` — the main composite image (flag + contributors)
+- `flag.svg` — standalone flag (for separate use)
 
 ---
 
@@ -215,14 +269,14 @@ Requirements: Python 3.7+ (no pip packages needed — uses only stdlib).
 
 ### The SVG shows placeholder names instead of real contributors
 
-This means the GitHub API request failed. Common causes:
+The GitHub API request failed. Common causes:
 - **Private repository**: The action needs access to the repo's contributor list. For private repos, you may need to provide a `GITHUB_TOKEN` in the workflow.
-- **Rate limiting**: Unauthenticated API requests are limited to 60/hour. If you're testing frequently, wait or use a token.
+- **Rate limiting**: Unauthenticated API requests are limited to 60/hour. If testing frequently, wait or use a token.
 
 ### The icon doesn't show up
 
-- Make sure the `icon-url` is a direct link to an image file (not a webpage)
-- The URL must be publicly accessible (try opening it in an incognito browser window)
+- Make sure `icon-url` is a direct link to an image file (not a webpage)
+- The URL must be publicly accessible (try opening it in an incognito window)
 - Supported formats: PNG, JPG, SVG, WebP
 
 ### The workflow doesn't run on schedule
@@ -233,8 +287,8 @@ This means the GitHub API request failed. Common causes:
 
 ### Avatars look broken or don't load
 
-- Avatars are loaded from `github.com/username.png` — this only works when the SVG is viewed on GitHub (in READMEs, issues, etc.)
-- If viewing the SVG locally in a browser, avatars may not load due to CORS restrictions
+- Avatars are embedded as base64 in the SVG, so they work everywhere
+- If using the external URL fallback, avatars only load on GitHub (READMEs, issues, etc.)
 
 ---
 

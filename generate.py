@@ -81,6 +81,8 @@ def build_config(args):
         "contributors": {
             "count": int(args.count or contrib.get("count", DEFAULTS["count"])),
             "avatar_size": int(args.avatar_size or contrib.get("avatar_size", DEFAULTS["avatar_size"])),
+            "shape": args.shape or contrib.get("shape", "circle"),
+            "show_text": not args.no_text,
         },
         "output": args.output or DEFAULTS["output"],
         "flag_output": args.flag_output or DEFAULTS["flag_output"],
@@ -97,6 +99,10 @@ def parse_args():
     p.add_argument("--icon-scale", help="Icon scale relative to disc (0-1)")
     p.add_argument("--count", help="Number of contributors to show")
     p.add_argument("--avatar-size", help="Avatar diameter in px")
+    p.add_argument("--shape", default="circle",
+                   choices=["circle", "roundrect", "1:1", "3:4", "2:3", "4:5"],
+                   help="Avatar shape (default: circle)")
+    p.add_argument("--no-text", action="store_true", help="Hide contributor name and commit count")
     p.add_argument("--output", help="Output SVG path")
     p.add_argument("--flag-output", help="Standalone flag SVG path")
     return p.parse_args()
@@ -214,6 +220,9 @@ def build_composite_svg(config, contributors, avatars=None):
     if avatars is None:
         avatars = {}
 
+    shape = config["contributors"].get("shape", "circle")
+    show_text = config["contributors"].get("show_text", True)
+
     u = flag_h / 8
     red_top = u + u * 0.25       # 62.5
     red_bot = red_top + u * 5.5  # 337.5
@@ -230,40 +239,68 @@ def build_composite_svg(config, contributors, avatars=None):
         avatar_zone_right = flag_w - 40
         avatar_zone_w = avatar_zone_right - avatar_zone_left
         slot_w = avatar_zone_w
-        max_avatar = min(int(slot_w - 20), int((red_bot - red_top) * 0.45))
-    else:
-        max_avatar = min(int(slot_w - 20), int((red_bot - red_top) * 0.4))
 
-    avatar_size = min(config["contributors"].get("avatar_size", 96), max_avatar)
-    avatar_r = avatar_size / 2
+    # Shape dimensions
+    shape_ratios = {"1:1": 1.0, "3:4": 0.75, "2:3": 0.667, "4:5": 0.8, "roundrect": 1.0}
+    text_margin = 0.55 if show_text else 0.7
 
     avatar_blocks = []
     for i, user in enumerate(top):
         cx = avatar_zone_left + slot_w * i + slot_w / 2
-        cy = red_mid - 10
+        cy = red_mid - (10 if show_text else 0)
         avatar_data_uri = avatars.get(user["login"], "")
         if not avatar_data_uri:
-            avatar_data_uri = f"https://github.com/{_xml_escape(user['login'])}.png?size={avatar_size}"
-        commits_text = f"{user['contributions']:,}"
+            avatar_data_uri = f"https://github.com/{_xml_escape(user['login'])}.png?size=96"
 
         profile_url = f"https://github.com/{_xml_escape(user['login'])}"
-        avatar_blocks.append(f'''
-  <!-- {user['login']} -->
+
+        if shape == "circle":
+            max_r = min((slot_w - 20) / 2, (red_bot - red_top) * (0.225 if count == 1 else 0.2))
+            r = min(48.0, max_r)
+            avatar_blocks.append(f'''
+  <!-- {_xml_escape(user['login'])} -->
   <a href="{profile_url}" target="_blank">
-  <circle cx="{_r(cx)}" cy="{_r(cy)}" r="{_r(avatar_r + 3)}" fill="{c['white']}" opacity="0.25"/>
-  <clipPath id="clip{i}"><circle cx="{_r(cx)}" cy="{_r(cy)}" r="{_r(avatar_r)}"/></clipPath>
+  <circle cx="{_r(cx)}" cy="{_r(cy)}" r="{_r(r + 3)}" fill="{c['white']}" opacity="0.25"/>
+  <clipPath id="clip{i}"><circle cx="{_r(cx)}" cy="{_r(cy)}" r="{_r(r)}"/></clipPath>
   <image href="{_xml_escape(avatar_data_uri)}"
-         x="{_r(cx - avatar_r)}" y="{_r(cy - avatar_r)}"
-         width="{avatar_size}" height="{avatar_size}"
+         x="{_r(cx - r)}" y="{_r(cy - r)}"
+         width="{_r(r * 2)}" height="{_r(r * 2)}"
          clip-path="url(#clip{i})"
-         preserveAspectRatio="xMidYMid slice"/>
-  <text x="{_r(cx)}" y="{_r(cy + avatar_r + 15)}" text-anchor="middle"
+         preserveAspectRatio="xMidYMid slice"/>''')
+        else:
+            ratio = shape_ratios.get(shape, 1.0)
+            max_w = slot_w - 16
+            max_h = (red_bot - red_top) * text_margin
+            aw = min(80.0, max_w)
+            ah = aw / ratio
+            if ah > max_h:
+                ah = max_h
+                aw = ah * ratio
+            rx = min(aw, ah) * 0.15 if shape == "roundrect" else 0
+            x0 = cx - aw / 2
+            y0 = cy - ah / 2
+            avatar_blocks.append(f'''
+  <!-- {_xml_escape(user['login'])} -->
+  <a href="{profile_url}" target="_blank">
+  <clipPath id="clip{i}"><rect x="{_r(x0)}" y="{_r(y0)}" width="{_r(aw)}" height="{_r(ah)}" rx="{rx:.1f}"/></clipPath>
+  <image href="{_xml_escape(avatar_data_uri)}"
+         x="{_r(x0)}" y="{_r(y0)}"
+         width="{_r(aw)}" height="{_r(ah)}"
+         clip-path="url(#clip{i})"
+         preserveAspectRatio="xMidYMid slice"/>''')
+
+        if show_text:
+            text_y_base = _r(cy + (r + 15 if shape == "circle" else ah / 2 + 15))
+            text_y_commits = _r(cy + (r + 28 if shape == "circle" else ah / 2 + 28))
+            avatar_blocks.append(f'''
+  <text x="{_r(cx)}" y="{text_y_base}" text-anchor="middle"
         font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif"
         font-size="13" font-weight="600" fill="{c['white']}">{_xml_escape(user['login'])}</text>
-  <text x="{_r(cx)}" y="{_r(cy + avatar_r + 28)}" text-anchor="middle"
+  <text x="{_r(cx)}" y="{text_y_commits}" text-anchor="middle"
         font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif"
-        font-size="10" fill="{c['white']}" opacity="0.8">{commits_text} commits</text>
-  </a>''')
+        font-size="10" fill="{c['white']}" opacity="0.8">{user['contributions']:,} commits</text>''')
+
+        avatar_blocks.append('\n  </a>')
 
     flag_svg = build_flag_svg(config)
     flag_inner = _extract_svg_inner(flag_svg)

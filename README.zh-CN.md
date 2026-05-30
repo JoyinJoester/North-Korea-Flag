@@ -13,7 +13,7 @@
 这个 Action 会自动生成一张朝鲜国旗样式的 SVG 图片，并做两件事：
 
 1. **用你的项目图标替换国旗上的红星**（也可以保留默认红星）
-2. **在国旗的红色区域上显示贡献者的 GitHub 头像**（按 commit 数量排名）
+2. **在国旗的红色区域上显示贡献者的 GitHub 头像**（按 commit 数量排名），支持多种头像形状
 
 SVG 每周自动更新一次，贡献者排名会随代码提交变化。
 
@@ -42,7 +42,22 @@ SVG 每周自动更新一次，贡献者排名会随代码提交变化。
 ```
 
 - **左侧**：白色圆盘 + 你的图标（未设置则显示红色五角星）
-- **右侧红色区域**：贡献者的 GitHub 头像（自动裁剪为圆形）+ 用户名 + commit 次数
+- **右侧红色区域**：贡献者的头像 + 用户名 + commit 次数
+
+---
+
+## 在线生成器
+
+不想配置 GitHub Actions？使用 **[在线生成器](https://joyinjoester.github.io/North-Korea-Flag/)** 直接在网页上配置和预览旗帜，下载 SVG 或 PNG。
+
+功能：
+- 实时预览，修改即时生效
+- 颜色选择器自定义条纹颜色
+- 上传自定义图标，可调缩放
+- 多种头像形状：圆形、正方形、证件照比例(3:4)、竖版(2:3)等
+- 可隐藏贡献者文字
+- 从任意公开 GitHub 仓库自动获取贡献者
+- 导出 SVG 或高清 PNG
 
 ---
 
@@ -55,18 +70,18 @@ SVG 每周自动更新一次，贡献者排名会随代码提交变化。
 ```yaml
 name: 更新贡献者旗帜
 on:
-  workflow_dispatch:        # 允许手动触发
+  workflow_dispatch:
   schedule:
     - cron: '17 3 * * 1'   # 每周一 03:17 UTC 自动运行
 
 permissions:
-  contents: write           # 需要写入权限来提交 SVG 文件
+  contents: write
 
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: JoyinJoester/North-Korea-Flag@main
         with:
@@ -79,14 +94,14 @@ jobs:
 
 进入你的仓库 → 点击 **Actions** 选项卡 → 点击左侧的 **更新贡献者旗帜** → 点击 **Run workflow** → 点击绿色的 **Run workflow** 按钮。
 
-等待约 30 秒，workflow 会在仓库中创建 `North Korea/output.svg` 文件。
+等待约 30 秒，workflow 会在仓库中创建 `output.svg` 文件。
 
 ### 第 3 步：在 README 中引用
 
 在你的 `README.md` 中，添加以下内容：
 
 ```markdown
-![贡献者](North-Korea-Flag/output.svg)
+![贡献者](output.svg)
 ```
 
 完成！旗帜会每周自动更新。
@@ -107,8 +122,6 @@ jobs:
 
 ### 自定义颜色
 
-把国旗颜色换成你项目的主题色：
-
 ```yaml
 - uses: JoyinJoester/North-Korea-Flag@main
   with:
@@ -118,11 +131,9 @@ jobs:
     white: '#ffffff'    # 白色
 ```
 
-颜色值使用十六进制格式（如 `#FF0000` 是纯红）。可以在网上搜索"颜色选择器"来找到想要的颜色值。
+颜色值使用十六进制格式（如 `#FF0000` 是纯红）。
 
 ### 自定义图标（替换红星）
-
-用你的项目 Logo 替换国旗上的五角星：
 
 ```yaml
 - uses: JoyinJoester/North-Korea-Flag@main
@@ -131,12 +142,44 @@ jobs:
     icon-url: 'https://raw.githubusercontent.com/你的用户名/你的仓库/main/icon.png'
 ```
 
-**关于图标的注意事项**：
+**图标说明**：
 - 图片必须是公开可访问的 URL
 - **任何形状的图片都会自动裁剪为圆形**
-- 建议使用正方形图片（如 256×256 或 512×512），效果最佳
-- GitHub raw 链接格式：`https://raw.githubusercontent.com/用户名/仓库名/分支名/图片路径`
+- 建议使用正方形图片（如 256×256 或 512×512）
 - 默认缩放为圆盘的 80%，设置 `icon-scale: '1.0'` 可填满整个圆盘
+
+### 头像形状
+
+默认显示圆形头像，可以切换形状：
+
+```yaml
+- uses: JoyinJoester/North-Korea-Flag@main
+  with:
+    repo: '你的用户名/你的仓库'
+    shape: '3:4'    # 证件照比例
+```
+
+可选形状：
+
+| 形状 | 说明 |
+|------|------|
+| `circle` | 默认圆形头像 |
+| `roundrect` | 圆角矩形（正方形比例） |
+| `1:1` | 正方形 |
+| `3:4` | 证件照比例 |
+| `2:3` | 竖版比例 |
+| `4:5` | 照片比例 |
+
+### 隐藏贡献者文字
+
+只显示头像，不显示名字和提交数：
+
+```yaml
+- uses: JoyinJoester/North-Korea-Flag@main
+  with:
+    repo: '你的用户名/你的仓库'
+    no-text: 'true'
+```
 
 ### 完整配置示例
 
@@ -150,7 +193,8 @@ jobs:
     icon-url: 'https://raw.githubusercontent.com/your-username/your-repo/main/logo.png'
     icon-scale: '0.8'
     count: '5'
-    output: 'North Korea/output.svg'
+    shape: 'circle'
+    output: 'output.svg'
 ```
 
 ---
@@ -166,45 +210,32 @@ jobs:
 | `icon-url` | 否 | 项目图标的公开图片 URL，任何形状自动裁剪为圆形 | 红色五角星 |
 | `icon-scale` | 否 | 图标相对于白色圆盘的大小比例（0.0 到 1.0） | `0.8` |
 | `count` | 否 | 显示的贡献者数量 | `3` |
-| `output` | 否 | 生成的 SVG 保存路径 | `North Korea/output.svg` |
-
----
-
-## 工作原理
-
-1. 通过 GitHub API 获取仓库的 top 贡献者（按总 commit 数排序）
-2. 生成包含国旗条纹、图标/红星、圆形头像的 SVG
-3. 头像图片直接从 GitHub CDN 加载（`github.com/用户名.png`），无需下载
-4. SVG 自动提交到你的仓库
-5. README 引用 SVG 文件，GitHub 会自动渲染显示
-
-### 会提交哪些文件？
-
-只会在你的仓库中创建/更新两个文件：
-- `North Korea/output.svg` — 主要的组合图片（国旗 + 贡献者）
-- `North Korea/flag.svg` — 独立的国旗图片（可单独使用）
+| `shape` | 否 | 头像形状：`circle`、`roundrect`、`1:1`、`3:4`、`2:3`、`4:5` | `circle` |
+| `no-text` | 否 | 设为 `true` 隐藏贡献者姓名和提交数 | (空) |
+| `output` | 否 | 生成的 SVG 保存路径 | `output.svg` |
 
 ---
 
 ## 不使用 GitHub Actions 的方式
 
-如果你想在本地或其他 CI 系统中运行：
-
 ```bash
 # 基本用法
-python "North-Korea-Flag/generate.py" --repo owner/repo
+python generate.py --repo owner/repo
 
 # 自定义颜色
-python "North-Korea-Flag/generate.py" --repo owner/repo --blue "#0055aa" --red "#cc0000"
+python generate.py --repo owner/repo --blue "#0055aa" --red "#cc0000"
 
 # 使用自定义图标
-python "North-Korea-Flag/generate.py" --repo owner/repo --icon-url "https://example.com/icon.png"
+python generate.py --repo owner/repo --icon-url "https://example.com/icon.png"
 
-# 显示 5 个贡献者
-python "North-Korea-Flag/generate.py" --repo owner/repo --count 5
+# 显示 5 个贡献者，证件照形状
+python generate.py --repo owner/repo --count 5 --shape 3:4
+
+# 无文字模式
+python generate.py --repo owner/repo --no-text
 
 # 指定输出路径
-python "North-Korea-Flag/generate.py" --repo owner/repo --output "./my-flag.svg"
+python generate.py --repo owner/repo --output "./my-flag.svg"
 ```
 
 运行要求：Python 3.7+（无需安装任何第三方包，只用标准库）。
@@ -217,7 +248,7 @@ python "North-Korea-Flag/generate.py" --repo owner/repo --output "./my-flag.svg"
 
 这说明 GitHub API 请求失败了。常见原因：
 - **私有仓库**：Action 需要访问仓库的贡献者列表，私有仓库可能需要额外配置 `GITHUB_TOKEN`
-- **API 频率限制**：未认证的 API 请求限制为每小时 60 次，频繁测试时请等待或使用 token
+- **API 频率限制**：未认证的 API 请求限制为每小时 60 次
 
 ### 图标没有显示
 
@@ -230,11 +261,6 @@ python "North-Korea-Flag/generate.py" --repo owner/repo --output "./my-flag.svg"
 - GitHub 会在仓库 60 天无活动后自动禁用定时 workflow
 - 推送任意 commit 即可重新启用
 - 也可以随时通过 **Actions** → **Run workflow** 手动触发
-
-### 头像显示不出来
-
-- 头像从 `github.com/用户名.png` 加载，只有在 GitHub 上查看 SVG 时才能正常显示（README、Issue 等）
-- 本地浏览器查看 SVG 时，头像可能因跨域限制无法加载
 
 ---
 
