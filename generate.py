@@ -105,6 +105,11 @@ def parse_args():
 def fetch_avatar(login, size=96):
     """Download GitHub avatar and return as base64 data URI, or empty string on failure."""
     url = f"https://github.com/{login}.png?size={size}"
+    return _download_as_data_uri(url)
+
+
+def _download_as_data_uri(url):
+    """Download an image URL and return as base64 data URI, or empty string on failure."""
     req = urllib.request.Request(url, headers={"User-Agent": "north-korea-svg-gen"})
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
@@ -113,7 +118,7 @@ def fetch_avatar(login, size=96):
         b64 = base64.b64encode(data).decode("ascii")
         return f"data:{content_type};base64,{b64}"
     except Exception as e:
-        print(f"Warning: failed to fetch avatar for {login}: {e}", file=sys.stderr)
+        print(f"Warning: failed to download {url}: {e}", file=sys.stderr)
         return ""
 
 
@@ -164,16 +169,18 @@ def build_flag_svg(config):
     icon = config.get("icon", {})
     icon_url = icon.get("url", "").strip()
     icon_scale = icon.get("scale", 0.8)
+    icon_data_uri = config.get("icon_data_uri", "")
 
     if icon_url:
         icon_size = disc_r * 2 * icon_scale
         ix = disc_cx - icon_size / 2
         iy = disc_cy - icon_size / 2
+        icon_href = icon_data_uri if icon_data_uri else icon_url
         disc_content = (
             f'<defs><clipPath id="icon-clip">'
             f'<circle cx="{disc_cx:.1f}" cy="{disc_cy:.1f}" r="{disc_r:.1f}"/>'
             f'</clipPath></defs>'
-            f'<image href="{_xml_escape(icon_url)}" '
+            f'<image href="{_xml_escape(icon_href)}" '
             f'x="{ix:.1f}" y="{iy:.1f}" '
             f'width="{icon_size:.1f}" height="{icon_size:.1f}" '
             f'clip-path="url(#icon-clip)" '
@@ -305,6 +312,12 @@ def main():
     for user in contributors[:count]:
         print(f"  Fetching avatar for {user['login']}...")
         avatars[user["login"]] = fetch_avatar(user["login"], avatar_size)
+
+    # Download icon as base64 data URI if configured
+    icon_url = config.get("icon", {}).get("url", "").strip()
+    if icon_url:
+        print(f"  Fetching icon from {icon_url}...")
+        config["icon_data_uri"] = _download_as_data_uri(icon_url)
 
     # Write standalone flag
     with open(config["flag_output"], "w", encoding="utf-8") as f:
