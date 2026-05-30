@@ -7,9 +7,12 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:#0d1117;color:#c9d1d9;min-height:100vh}
-header{padding:24px 32px;border-bottom:1px solid #21262d;display:flex;align-items:center;gap:12px}
+header{padding:20px 32px;border-bottom:1px solid #21262d;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
 header h1{font-size:20px;font-weight:600;color:#f0f6fc}
-header span{font-size:13px;color:#8b949e}
+.header-right{display:flex;align-items:center;gap:12px}
+.header-right span{font-size:13px;color:#8b949e}
+.lang-btn{background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:4px 10px;border-radius:4px;font-size:12px;cursor:pointer}
+.lang-btn.active{background:#58a6ff;color:#0d1117;border-color:#58a6ff}
 .container{display:flex;gap:24px;padding:24px 32px;max-width:1400px;margin:0 auto}
 .preview{flex:1;min-width:0}
 .preview-box{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:20px;display:flex;align-items:center;justify-content:center}
@@ -50,12 +53,18 @@ input[type=range]{width:100%;accent-color:#58a6ff}
 .file-input{display:none}
 .icon-row{display:flex;align-items:center;gap:8px}
 .icon-preview{width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #30363d}
+.hint{font-size:11px;color:#6e7681;margin-top:4px}
+@media(max-width:800px){.container{flex-direction:column}.controls{width:100%}}
 </style>
 </head>
 <body>
 <header>
-  <h1>North Korea Flag Generator</h1>
-  <span>Generate contributor flag SVGs for your GitHub README</span>
+  <h1 id="title">North Korea Flag Generator</h1>
+  <div class="header-right">
+    <span id="subtitle">Generate contributor flag SVGs for your GitHub README</span>
+    <button class="lang-btn" id="langEN" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" id="langZH" onclick="setLang('zh')">中文</button>
+  </div>
 </header>
 
 <div class="container">
@@ -64,25 +73,24 @@ input[type=range]{width:100%;accent-color:#58a6ff}
   </div>
 
   <div class="controls">
-    <!-- Colors -->
     <div class="section">
-      <h3>Colors</h3>
+      <h3 id="secColors">COLORS</h3>
       <div class="field">
-        <label>Blue (top/bottom stripes)</label>
+        <label id="lblBlue">Blue (top/bottom stripes)</label>
         <div class="color-row">
           <input type="color" id="blue" value="#024FA2">
           <input type="text" id="blueHex" value="#024FA2">
         </div>
       </div>
       <div class="field">
-        <label>Red (center stripe)</label>
+        <label id="lblRed">Red (center stripe)</label>
         <div class="color-row">
           <input type="color" id="red" value="#ED1C27">
           <input type="text" id="redHex" value="#ED1C27">
         </div>
       </div>
       <div class="field">
-        <label>White (disc &amp; stripes)</label>
+        <label id="lblWhite">White (disc &amp; stripes)</label>
         <div class="color-row">
           <input type="color" id="white" value="#FFFFFF">
           <input type="text" id="whiteHex" value="#FFFFFF">
@@ -90,19 +98,18 @@ input[type=range]{width:100%;accent-color:#58a6ff}
       </div>
     </div>
 
-    <!-- Icon -->
     <div class="section">
-      <h3>Icon (replaces star)</h3>
+      <h3 id="secIcon">ICON (REPLACES STAR)</h3>
       <div class="field">
         <div class="icon-row">
-          <button class="btn" onclick="document.getElementById('iconFile').click()">Upload Icon</button>
+          <button class="btn" id="btnUploadIcon" onclick="document.getElementById('iconFile').click()">Upload Icon</button>
           <button class="btn btn-danger" id="clearIcon" style="display:none" onclick="clearIcon()">Remove</button>
           <img id="iconPreview" class="icon-preview" style="display:none">
           <input type="file" id="iconFile" class="file-input" accept="image/*">
         </div>
       </div>
       <div class="field">
-        <label>Scale</label>
+        <label id="lblScale">Scale</label>
         <div class="range-row">
           <input type="range" id="iconScale" min="0.1" max="1" step="0.05" value="0.8">
           <span id="iconScaleVal">0.80</span>
@@ -110,31 +117,135 @@ input[type=range]{width:100%;accent-color:#58a6ff}
       </div>
     </div>
 
-    <!-- Contributors -->
     <div class="section">
-      <h3>Contributors</h3>
+      <h3 id="secContrib">CONTRIBUTORS</h3>
       <div class="fetch-row">
         <input type="text" id="repoInput" placeholder="owner/repo">
-        <button class="btn" onclick="fetchRepo()">Fetch</button>
+        <button class="btn" id="btnFetch" onclick="fetchRepo()">Fetch</button>
+      </div>
+      <div class="field">
+        <label id="lblShape">Avatar Shape</label>
+        <div class="color-row">
+          <select id="avatarShape" onchange="render()" style="flex:1;background:#0d1117;border:1px solid #30363d;border-radius:4px;padding:4px 8px;color:#c9d1d9;font-size:13px">
+            <option value="circle">Circle</option>
+            <option value="roundrect">Rounded Rect</option>
+            <option value="1:1">Square (1:1)</option>
+            <option value="3:4">Passport (3:4)</option>
+            <option value="2:3">Portrait (2:3)</option>
+            <option value="4:5">Photo (4:5)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="showText" checked onchange="render()"> <span id="lblShowText">Show name &amp; commits</span></label>
       </div>
       <div id="contributors"></div>
       <div class="msg" id="fetchMsg"></div>
-      <button class="btn" onclick="addContributor()" style="margin-top:8px">+ Add Contributor</button>
+      <button class="btn" id="btnAdd" onclick="addContributor()" style="margin-top:8px">+ Add Contributor</button>
+      <div class="hint" id="hintContrib"></div>
     </div>
 
-    <!-- Export -->
     <div class="section">
       <div class="btn-row">
-        <button class="btn btn-primary" onclick="downloadSVG()">Download SVG</button>
-        <button class="btn btn-primary" onclick="downloadPNG()">Download PNG</button>
+        <button class="btn btn-primary" id="btnSVG" onclick="downloadSVG()">Download SVG</button>
+        <button class="btn btn-primary" id="btnPNG" onclick="downloadPNG()">Download PNG</button>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-// --- SVG Generation (ported from generate.py) ---
+// --- i18n ---
+const I18N = {
+  en: {
+    title: 'North Korea Flag Generator',
+    subtitle: 'Generate contributor flag SVGs for your GitHub README',
+    secColors: 'COLORS',
+    lblBlue: 'Blue (top/bottom stripes)',
+    lblRed: 'Red (center stripe)',
+    lblWhite: 'White (disc & stripes)',
+    secIcon: 'ICON (REPLACES STAR)',
+    btnUpload: 'Upload Icon',
+    btnRemove: 'Remove',
+    lblScale: 'Scale',
+    secContrib: 'CONTRIBUTORS',
+    btnFetch: 'Fetch',
+    btnAdd: '+ Add Contributor',
+    hintContrib: 'Leave empty to generate a pure flag without contributors.',
+    btnSVG: 'Download SVG',
+    btnPNG: 'Download PNG',
+    placeholder: 'owner/repo',
+    phUser: 'username',
+    fetching: 'Fetching...',
+    loaded: n => `Loaded ${n} contributors`,
+    errEnter: 'Enter owner/repo',
+    errFetch: e => `Error: ${e}`,
+    commits: 'commits',
+    avatar: 'Avatar',
+    lblShape: 'Avatar Shape',
+    lblShowText: 'Show name & commits',
+  },
+  zh: {
+    title: '朝鲜国旗生成器',
+    subtitle: '为 GitHub README 生成带贡献者的旗帜 SVG',
+    secColors: '颜色',
+    lblBlue: '蓝色（上下条纹）',
+    lblRed: '红色（中间条纹）',
+    lblWhite: '白色（圆盘和条纹）',
+    secIcon: '图标（替换红星）',
+    btnUpload: '上传图标',
+    btnRemove: '移除',
+    lblScale: '缩放',
+    secContrib: '贡献者',
+    btnFetch: '获取',
+    btnAdd: '+ 添加贡献者',
+    hintContrib: '不添加贡献者可生成纯朝鲜国旗。',
+    btnSVG: '下载 SVG',
+    btnPNG: '下载 PNG',
+    placeholder: '用户名/仓库名',
+    phUser: '用户名',
+    fetching: '获取中...',
+    loaded: n => `已加载 ${n} 位贡献者`,
+    errEnter: '请输入 用户名/仓库名',
+    errFetch: e => `错误：${e}`,
+    commits: '次提交',
+    avatar: '头像',
+    lblShape: '头像形状',
+    lblShowText: '显示姓名和提交数',
+  }
+};
 
+let lang = 'en';
+function t(key) { return I18N[lang][key] || I18N.en[key] || key; }
+function setLang(l) {
+  lang = l;
+  document.getElementById('langEN').className = 'lang-btn' + (l === 'en' ? ' active' : '');
+  document.getElementById('langZH').className = 'lang-btn' + (l === 'zh' ? ' active' : '');
+  document.getElementById('title').textContent = t('title');
+  document.getElementById('subtitle').textContent = t('subtitle');
+  document.getElementById('secColors').textContent = t('secColors');
+  document.getElementById('lblBlue').textContent = t('lblBlue');
+  document.getElementById('lblRed').textContent = t('lblRed');
+  document.getElementById('lblWhite').textContent = t('lblWhite');
+  document.getElementById('secIcon').textContent = t('secIcon');
+  document.getElementById('btnUploadIcon').textContent = t('btnUpload');
+  document.getElementById('clearIcon').textContent = t('btnRemove');
+  document.getElementById('lblScale').textContent = t('lblScale');
+  document.getElementById('secContrib').textContent = t('secContrib');
+  document.getElementById('btnFetch').textContent = t('btnFetch');
+  document.getElementById('btnAdd').textContent = t('btnAdd');
+  document.getElementById('hintContrib').textContent = t('hintContrib');
+  document.getElementById('btnSVG').textContent = t('btnSVG');
+  document.getElementById('btnPNG').textContent = t('btnPNG');
+  document.getElementById('repoInput').placeholder = t('placeholder');
+  document.getElementById('lblShape').textContent = t('lblShape');
+  document.getElementById('lblShowText').textContent = t('lblShowText');
+  document.querySelectorAll('.c-name').forEach(el => el.placeholder = t('phUser'));
+  document.querySelectorAll('.avatar-btn').forEach(el => el.textContent = t('avatar'));
+  render();
+}
+
+// --- SVG Generation ---
 const FLAG_W = 660, FLAG_H = 400;
 const U = FLAG_H / 8;
 const BLUE_H = U;
@@ -150,7 +261,7 @@ const RED_BOT = RED_TOP + U * 5.5;
 const RED_MID = (RED_TOP + RED_BOT) / 2;
 
 function buildStarPoints(cx, cy, outerR) {
-  const innerR = outerR * Math.sin(Math.PI / 10) / Math.sin(Math.PI * 2 / 5);
+  const innerR = outerR * Math.sin(Math.PI / 10) / Math.sin(3 * Math.PI / 10);
   const pts = [];
   for (let i = 0; i < 10; i++) {
     const angle = (-90 + i * 36) * Math.PI / 180;
@@ -185,8 +296,7 @@ function getContributors() {
   return list;
 }
 
-function buildFlagSVG(config) {
-  const c = config;
+function buildFlagSVG(c) {
   let discContent;
   if (c.iconDataUri) {
     const iconSize = DISC_R * 2 * c.iconScale;
@@ -208,33 +318,79 @@ ${discContent}`;
 
 function buildCompositeSVG(config, contributors) {
   const c = config;
-  const count = contributors.length;
-  let zoneLeft = 310, zoneRight = FLAG_W - 20;
-  if (count === 1) { zoneLeft = 300; zoneRight = FLAG_W - 40; }
-  const zoneW = zoneRight - zoneLeft;
-  const slotW = zoneW / Math.max(count, 1);
-  const maxAvatar = count === 1
-    ? Math.min(slotW - 20, (RED_BOT - RED_TOP) * 0.45)
-    : Math.min(slotW - 20, (RED_BOT - RED_TOP) * 0.4);
-  const avatarSize = Math.min(96, maxAvatar);
-  const avatarR = avatarSize / 2;
-
+  const showText = document.getElementById('showText').checked;
+  const shape = document.getElementById('avatarShape').value;
   let blocks = '';
-  contributors.forEach((u, i) => {
-    const cx = zoneLeft + slotW * i + slotW / 2;
-    const cy = RED_MID - 10;
-    const avatarSrc = u.avatar || `https://github.com/${esc(u.login)}.png?size=${avatarSize}`;
-    const profileUrl = `https://github.com/${esc(u.login)}`;
-    blocks += `
-<a href="${profileUrl}" target="_blank">
-<circle cx="${Math.round(cx)}" cy="${Math.round(cy)}" r="${Math.round(avatarR + 3)}" fill="${c.white}" opacity="0.25"/>
-<clipPath id="clip${i}"><circle cx="${Math.round(cx)}" cy="${Math.round(cy)}" r="${Math.round(avatarR)}"/></clipPath>
-<image href="${esc(avatarSrc)}" x="${Math.round(cx - avatarR)}" y="${Math.round(cy - avatarR)}" width="${avatarSize}" height="${avatarSize}" clip-path="url(#clip${i})" preserveAspectRatio="xMidYMid slice"/>
-<text x="${Math.round(cx)}" y="${Math.round(cy + avatarR + 15)}" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="${c.white}">${esc(u.login)}</text>
-<text x="${Math.round(cx)}" y="${Math.round(cy + avatarR + 28)}" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="${c.white}" opacity="0.8">${u.contributions.toLocaleString()} commits</text>
-</a>`;
-  });
+  if (contributors.length > 0) {
+    const count = contributors.length;
+    let zoneLeft = 310, zoneRight = FLAG_W - 20;
+    if (count === 1) { zoneLeft = 300; zoneRight = FLAG_W - 40; }
+    const zoneW = zoneRight - zoneLeft;
+    const slotW = zoneW / count;
 
+    // Shape dimensions
+    let avatarW, avatarH, clipDef, imgClip;
+    const textOffset = showText ? 0 : 0;
+    if (shape === 'circle') {
+      const maxR = count === 1
+        ? Math.min((slotW - 20) / 2, (RED_BOT - RED_TOP) * 0.225)
+        : Math.min((slotW - 20) / 2, (RED_BOT - RED_TOP) * 0.2);
+      const r = Math.min(48, maxR);
+      avatarW = r * 2; avatarH = r * 2;
+      clipDef = (cx, cy, i) => `<clipPath id="clip${i}"><circle cx="${Math.round(cx)}" cy="${Math.round(cy)}" r="${Math.round(r)}"/></clipPath>`;
+      imgClip = i => `clip-path="url(#clip${i})"`;
+    } else {
+      // Rectangle shapes
+      let ratio;
+      switch (shape) {
+        case '1:1': ratio = 1; break;
+        case '3:4': ratio = 3/4; break;
+        case '2:3': ratio = 2/3; break;
+        case '4:5': ratio = 4/5; break;
+        case 'roundrect': ratio = 1; break;
+        default: ratio = 1;
+      }
+      const maxW = slotW - 16;
+      const maxH = (RED_BOT - RED_TOP) * (showText ? 0.55 : 0.7);
+      avatarW = Math.min(80, maxW);
+      avatarH = avatarW / ratio;
+      if (avatarH > maxH) { avatarH = maxH; avatarW = avatarH * ratio; }
+      const rx = shape === 'roundrect' ? Math.min(avatarW, avatarH) * 0.15 : 0;
+      clipDef = (cx, cy, i) => {
+        const x = Math.round(cx - avatarW / 2), y = Math.round(cy - avatarH / 2);
+        return `<clipPath id="clip${i}"><rect x="${x}" y="${y}" width="${Math.round(avatarW)}" height="${Math.round(avatarH)}" rx="${rx.toFixed(1)}"/></clipPath>`;
+      };
+      imgClip = i => `clip-path="url(#clip${i})"`;
+    }
+
+    contributors.forEach((u, i) => {
+      const cx = zoneLeft + slotW * i + slotW / 2;
+      const cy = RED_MID - (showText ? 10 : 0);
+      const avatarSrc = u.avatar || `https://github.com/${esc(u.login)}.png?size=96`;
+      const profileUrl = `https://github.com/${esc(u.login)}`;
+
+      if (shape === 'circle') {
+        const r = avatarW / 2;
+        blocks += `
+<a href="${profileUrl}" target="_blank">
+<circle cx="${Math.round(cx)}" cy="${Math.round(cy)}" r="${Math.round(r + 3)}" fill="${c.white}" opacity="0.25"/>
+${clipDef(cx, cy, i)}
+<image href="${esc(avatarSrc)}" x="${Math.round(cx - r)}" y="${Math.round(cy - r)}" width="${Math.round(avatarW)}" height="${Math.round(avatarH)}" ${imgClip(i)} preserveAspectRatio="xMidYMid slice"/>
+${showText ? `<text x="${Math.round(cx)}" y="${Math.round(cy + r + 15)}" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="${c.white}">${esc(u.login)}</text>
+<text x="${Math.round(cx)}" y="${Math.round(cy + r + 28)}" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="${c.white}" opacity="0.8">${u.contributions.toLocaleString()} ${t('commits')}</text>` : ''}
+</a>`;
+      } else {
+        const x = Math.round(cx - avatarW / 2), y = Math.round(cy - avatarH / 2);
+        blocks += `
+<a href="${profileUrl}" target="_blank">
+${clipDef(cx, cy, i)}
+<image href="${esc(avatarSrc)}" x="${x}" y="${y}" width="${Math.round(avatarW)}" height="${Math.round(avatarH)}" ${imgClip(i)} preserveAspectRatio="xMidYMid slice"/>
+${showText ? `<text x="${Math.round(cx)}" y="${Math.round(cy + avatarH / 2 + 15)}" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="${c.white}">${esc(u.login)}</text>
+<text x="${Math.round(cx)}" y="${Math.round(cy + avatarH / 2 + 28)}" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="${c.white}" opacity="0.8">${u.contributions.toLocaleString()} ${t('commits')}</text>` : ''}
+</a>`;
+      }
+    });
+  }
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${FLAG_W}" height="${FLAG_H}" viewBox="0 0 ${FLAG_W} ${FLAG_H}">
 ${buildFlagSVG(config)}
 ${blocks}
@@ -305,14 +461,13 @@ function addContributor(name, commits, avatarSrc) {
   div.innerHTML = `
     <button class="remove" onclick="this.parentElement.remove();render()">&times;</button>
     <div class="row">
-      <input type="text" class="c-name" placeholder="username" value="${esc(name||'')}" oninput="render()">
-      <input type="number" class="c-commits" placeholder="0" min="0" value="${commits||0}" oninput="render()">
+      <input type="text" class="c-name" placeholder="${t('phUser')}" value="${esc(name||'')}" oninput="render()">
+      <input type="number" class="c-commits" placeholder="0" min="0" value="${commits||''}" oninput="render()">
     </div>
     <div class="row">
       <input type="hidden" class="c-avatar-src" value="${esc(avatarSrc||'')}">
-      <button class="btn avatar-btn" onclick="pickAvatar(this)">Avatar</button>
+      <button class="btn avatar-btn" onclick="pickAvatar(this)">${t('avatar')}</button>
       <img class="avatar-preview" src="${avatarSrc||''}" style="display:${avatarSrc?'':'none'}">
-      <span class="msg" style="font-size:11px">${esc(name||'')}</span>
     </div>`;
   document.getElementById('contributors').appendChild(div);
   render();
@@ -345,11 +500,11 @@ async function fetchRepo() {
   const msg = document.getElementById('fetchMsg');
   if (!repo || !repo.includes('/')) {
     msg.className = 'msg error';
-    msg.textContent = 'Enter owner/repo';
+    msg.textContent = t('errEnter');
     return;
   }
   msg.className = 'msg';
-  msg.textContent = 'Fetching...';
+  msg.textContent = t('fetching');
   try {
     const resp = await fetch(`https://api.github.com/repos/${repo}/contributors?per_page=6`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -357,7 +512,6 @@ async function fetchRepo() {
     const users = data.filter(c => c.type === 'User');
     document.getElementById('contributors').innerHTML = '';
     for (const u of users) {
-      // Fetch avatar as base64
       let avatarSrc = '';
       try {
         const imgResp = await fetch(`https://github.com/${u.login}.png?size=96`);
@@ -371,10 +525,10 @@ async function fetchRepo() {
       addContributor(u.login, u.contributions, avatarSrc);
     }
     msg.className = 'msg success';
-    msg.textContent = `Loaded ${users.length} contributors`;
+    msg.textContent = t('loaded')(users.length);
   } catch (e) {
     msg.className = 'msg error';
-    msg.textContent = `Error: ${e.message}`;
+    msg.textContent = t('errFetch')(e.message);
   }
 }
 
@@ -417,9 +571,7 @@ function downloadPNG() {
 }
 
 // --- Init ---
-addContributor('contributor-1', 0, '');
-addContributor('contributor-2', 0, '');
-addContributor('contributor-3', 0, '');
+setLang('en');
 render();
 </script>
 </body>
