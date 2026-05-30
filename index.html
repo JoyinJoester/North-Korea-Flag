@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>North Korea Flag Generator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:#0d1117;color:#c9d1d9;min-height:100vh}
+header{padding:24px 32px;border-bottom:1px solid #21262d;display:flex;align-items:center;gap:12px}
+header h1{font-size:20px;font-weight:600;color:#f0f6fc}
+header span{font-size:13px;color:#8b949e}
+.container{display:flex;gap:24px;padding:24px 32px;max-width:1400px;margin:0 auto}
+.preview{flex:1;min-width:0}
+.preview-box{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:20px;display:flex;align-items:center;justify-content:center}
+.preview-box svg{max-width:100%;height:auto}
+.controls{width:360px;flex-shrink:0}
+.section{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px;margin-bottom:16px}
+.section h3{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#8b949e;margin-bottom:12px}
+.field{margin-bottom:12px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:13px;color:#c9d1d9;margin-bottom:4px}
+.color-row{display:flex;align-items:center;gap:8px}
+.color-row input[type=color]{width:36px;height:28px;border:1px solid #30363d;border-radius:4px;background:none;cursor:pointer;padding:0}
+.color-row input[type=text]{flex:1;background:#0d1117;border:1px solid #30363d;border-radius:4px;padding:4px 8px;color:#c9d1d9;font-size:13px;font-family:monospace}
+input[type=range]{width:100%;accent-color:#58a6ff}
+.range-row{display:flex;align-items:center;gap:8px}
+.range-row input[type=range]{flex:1}
+.range-row span{font-size:12px;color:#8b949e;min-width:28px;text-align:right}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid #30363d;border-radius:6px;background:#21262d;color:#c9d1d9;font-size:13px;cursor:pointer;transition:background .15s}
+.btn:hover{background:#30363d}
+.btn-primary{background:#238636;border-color:#238636;color:#fff}
+.btn-primary:hover{background:#2ea043}
+.btn-danger{background:transparent;border-color:#f85149;color:#f85149}
+.btn-danger:hover{background:#f8514922}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
+.contributor{background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:10px;margin-bottom:8px;position:relative}
+.contributor .row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.contributor .row:last-child{margin-bottom:0}
+.contributor input[type=text]{flex:1;background:#161b22;border:1px solid #30363d;border-radius:4px;padding:4px 8px;color:#c9d1d9;font-size:13px}
+.contributor input[type=number]{width:70px;background:#161b22;border:1px solid #30363d;border-radius:4px;padding:4px 8px;color:#c9d1d9;font-size:13px}
+.contributor .remove{position:absolute;top:6px;right:6px;background:none;border:none;color:#f85149;cursor:pointer;font-size:16px;line-height:1;padding:2px}
+.contributor .avatar-btn{font-size:12px;padding:3px 8px}
+.contributor .avatar-preview{width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid #30363d}
+.fetch-row{display:flex;gap:8px;margin-bottom:12px}
+.fetch-row input{flex:1;background:#0d1117;border:1px solid #30363d;border-radius:4px;padding:6px 10px;color:#c9d1d9;font-size:13px}
+.msg{font-size:12px;padding:6px 0;color:#8b949e}
+.msg.error{color:#f85149}
+.msg.success{color:#3fb950}
+.file-input{display:none}
+.icon-row{display:flex;align-items:center;gap:8px}
+.icon-preview{width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #30363d}
+</style>
+</head>
+<body>
+<header>
+  <h1>North Korea Flag Generator</h1>
+  <span>Generate contributor flag SVGs for your GitHub README</span>
+</header>
+
+<div class="container">
+  <div class="preview">
+    <div class="preview-box" id="preview"></div>
+  </div>
+
+  <div class="controls">
+    <!-- Colors -->
+    <div class="section">
+      <h3>Colors</h3>
+      <div class="field">
+        <label>Blue (top/bottom stripes)</label>
+        <div class="color-row">
+          <input type="color" id="blue" value="#024FA2">
+          <input type="text" id="blueHex" value="#024FA2">
+        </div>
+      </div>
+      <div class="field">
+        <label>Red (center stripe)</label>
+        <div class="color-row">
+          <input type="color" id="red" value="#ED1C27">
+          <input type="text" id="redHex" value="#ED1C27">
+        </div>
+      </div>
+      <div class="field">
+        <label>White (disc &amp; stripes)</label>
+        <div class="color-row">
+          <input type="color" id="white" value="#FFFFFF">
+          <input type="text" id="whiteHex" value="#FFFFFF">
+        </div>
+      </div>
+    </div>
+
+    <!-- Icon -->
+    <div class="section">
+      <h3>Icon (replaces star)</h3>
+      <div class="field">
+        <div class="icon-row">
+          <button class="btn" onclick="document.getElementById('iconFile').click()">Upload Icon</button>
+          <button class="btn btn-danger" id="clearIcon" style="display:none" onclick="clearIcon()">Remove</button>
+          <img id="iconPreview" class="icon-preview" style="display:none">
+          <input type="file" id="iconFile" class="file-input" accept="image/*">
+        </div>
+      </div>
+      <div class="field">
+        <label>Scale</label>
+        <div class="range-row">
+          <input type="range" id="iconScale" min="0.1" max="1" step="0.05" value="0.8">
+          <span id="iconScaleVal">0.80</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contributors -->
+    <div class="section">
+      <h3>Contributors</h3>
+      <div class="fetch-row">
+        <input type="text" id="repoInput" placeholder="owner/repo">
+        <button class="btn" onclick="fetchRepo()">Fetch</button>
+      </div>
+      <div id="contributors"></div>
+      <div class="msg" id="fetchMsg"></div>
+      <button class="btn" onclick="addContributor()" style="margin-top:8px">+ Add Contributor</button>
+    </div>
+
+    <!-- Export -->
+    <div class="section">
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="downloadSVG()">Download SVG</button>
+        <button class="btn btn-primary" onclick="downloadPNG()">Download PNG</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// --- SVG Generation (ported from generate.py) ---
+
+const FLAG_W = 660, FLAG_H = 400;
+const U = FLAG_H / 8;
+const BLUE_H = U;
+const WHITE_H = U * 0.25;
+const RED_H = U * 5.5;
+const RED_WHITE_H = RED_H + 2 * WHITE_H;
+const DISC_R = RED_WHITE_H / 3;
+const DISC_CX = FLAG_W * 0.25;
+const DISC_CY = FLAG_H / 2;
+const STAR_R = DISC_R - WHITE_H;
+const RED_TOP = U + U * 0.25;
+const RED_BOT = RED_TOP + U * 5.5;
+const RED_MID = (RED_TOP + RED_BOT) / 2;
+
+function buildStarPoints(cx, cy, outerR) {
+  const innerR = outerR * Math.sin(Math.PI / 10) / Math.sin(Math.PI * 2 / 5);
+  const pts = [];
+  for (let i = 0; i < 10; i++) {
+    const angle = (-90 + i * 36) * Math.PI / 180;
+    const r = i % 2 === 0 ? outerR : innerR;
+    pts.push(`${(cx + r * Math.cos(angle)).toFixed(2)},${(cy + r * Math.sin(angle)).toFixed(2)}`);
+  }
+  return pts.join(' ');
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function getConfig() {
+  return {
+    blue: document.getElementById('blue').value,
+    red: document.getElementById('red').value,
+    white: document.getElementById('white').value,
+    iconDataUri: iconDataUri || '',
+    iconScale: parseFloat(document.getElementById('iconScale').value),
+  };
+}
+
+function getContributors() {
+  const list = [];
+  document.querySelectorAll('.contributor').forEach(el => {
+    const name = el.querySelector('.c-name').value.trim();
+    const commits = parseInt(el.querySelector('.c-commits').value) || 0;
+    const avatarSrc = el.querySelector('.c-avatar-src').value || '';
+    if (name) list.push({ login: name, contributions: commits, avatar: avatarSrc });
+  });
+  return list;
+}
+
+function buildFlagSVG(config) {
+  const c = config;
+  let discContent;
+  if (c.iconDataUri) {
+    const iconSize = DISC_R * 2 * c.iconScale;
+    const ix = DISC_CX - iconSize / 2;
+    const iy = DISC_CY - iconSize / 2;
+    discContent = `<defs><clipPath id="icon-clip"><circle cx="${DISC_CX}" cy="${DISC_CY}" r="${DISC_R}"/></clipPath></defs>`
+      + `<image href="${esc(c.iconDataUri)}" x="${ix.toFixed(1)}" y="${iy.toFixed(1)}" width="${iconSize.toFixed(1)}" height="${iconSize.toFixed(1)}" clip-path="url(#icon-clip)" preserveAspectRatio="xMidYMid slice"/>`;
+  } else {
+    discContent = `<polygon points="${buildStarPoints(DISC_CX, DISC_CY, STAR_R)}" fill="${c.red}"/>`;
+  }
+  return `<rect x="0" y="0" width="${FLAG_W}" height="${BLUE_H.toFixed(1)}" fill="${c.blue}"/>
+<rect x="0" y="${BLUE_H.toFixed(1)}" width="${FLAG_W}" height="${WHITE_H.toFixed(1)}" fill="${c.white}"/>
+<rect x="0" y="${(BLUE_H + WHITE_H).toFixed(1)}" width="${FLAG_W}" height="${RED_H.toFixed(1)}" fill="${c.red}"/>
+<rect x="0" y="${(BLUE_H + WHITE_H + RED_H).toFixed(1)}" width="${FLAG_W}" height="${WHITE_H.toFixed(1)}" fill="${c.white}"/>
+<rect x="0" y="${(BLUE_H + WHITE_H + RED_H + WHITE_H).toFixed(1)}" width="${FLAG_W}" height="${BLUE_H.toFixed(1)}" fill="${c.blue}"/>
+<circle cx="${DISC_CX}" cy="${DISC_CY}" r="${DISC_R}" fill="${c.white}"/>
+${discContent}`;
+}
+
+function buildCompositeSVG(config, contributors) {
+  const c = config;
+  const count = contributors.length;
+  let zoneLeft = 310, zoneRight = FLAG_W - 20;
+  if (count === 1) { zoneLeft = 300; zoneRight = FLAG_W - 40; }
+  const zoneW = zoneRight - zoneLeft;
+  const slotW = zoneW / Math.max(count, 1);
+  const maxAvatar = count === 1
+    ? Math.min(slotW - 20, (RED_BOT - RED_TOP) * 0.45)
+    : Math.min(slotW - 20, (RED_BOT - RED_TOP) * 0.4);
+  const avatarSize = Math.min(96, maxAvatar);
+  const avatarR = avatarSize / 2;
+
+  let blocks = '';
+  contributors.forEach((u, i) => {
+    const cx = zoneLeft + slotW * i + slotW / 2;
+    const cy = RED_MID - 10;
+    const avatarSrc = u.avatar || `https://github.com/${esc(u.login)}.png?size=${avatarSize}`;
+    const profileUrl = `https://github.com/${esc(u.login)}`;
+    blocks += `
+<a href="${profileUrl}" target="_blank">
+<circle cx="${Math.round(cx)}" cy="${Math.round(cy)}" r="${Math.round(avatarR + 3)}" fill="${c.white}" opacity="0.25"/>
+<clipPath id="clip${i}"><circle cx="${Math.round(cx)}" cy="${Math.round(cy)}" r="${Math.round(avatarR)}"/></clipPath>
+<image href="${esc(avatarSrc)}" x="${Math.round(cx - avatarR)}" y="${Math.round(cy - avatarR)}" width="${avatarSize}" height="${avatarSize}" clip-path="url(#clip${i})" preserveAspectRatio="xMidYMid slice"/>
+<text x="${Math.round(cx)}" y="${Math.round(cy + avatarR + 15)}" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="${c.white}">${esc(u.login)}</text>
+<text x="${Math.round(cx)}" y="${Math.round(cy + avatarR + 28)}" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="${c.white}" opacity="0.8">${u.contributions.toLocaleString()} commits</text>
+</a>`;
+  });
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${FLAG_W}" height="${FLAG_H}" viewBox="0 0 ${FLAG_W} ${FLAG_H}">
+${buildFlagSVG(config)}
+${blocks}
+</svg>`;
+}
+
+// --- State ---
+let iconDataUri = '';
+
+// --- Render ---
+function render() {
+  const config = getConfig();
+  const contributors = getContributors();
+  const svg = buildCompositeSVG(config, contributors);
+  document.getElementById('preview').innerHTML = svg;
+}
+
+// --- Color sync ---
+function syncColor(picker, hex) {
+  document.getElementById(hex).value = document.getElementById(picker).value;
+  render();
+}
+function syncHex(hex, picker) {
+  const v = document.getElementById(hex).value;
+  if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+    document.getElementById(picker).value = v;
+  }
+  render();
+}
+
+['blue','red','white'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => syncColor(id, id+'Hex'));
+  document.getElementById(id+'Hex').addEventListener('input', () => syncHex(id+'Hex', id));
+});
+
+document.getElementById('iconScale').addEventListener('input', e => {
+  document.getElementById('iconScaleVal').textContent = parseFloat(e.target.value).toFixed(2);
+  render();
+});
+
+// --- Icon ---
+document.getElementById('iconFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    iconDataUri = ev.target.result;
+    document.getElementById('iconPreview').src = iconDataUri;
+    document.getElementById('iconPreview').style.display = '';
+    document.getElementById('clearIcon').style.display = '';
+    render();
+  };
+  reader.readAsDataURL(file);
+});
+
+function clearIcon() {
+  iconDataUri = '';
+  document.getElementById('iconPreview').style.display = 'none';
+  document.getElementById('clearIcon').style.display = 'none';
+  document.getElementById('iconFile').value = '';
+  render();
+}
+
+// --- Contributors ---
+function addContributor(name, commits, avatarSrc) {
+  const div = document.createElement('div');
+  div.className = 'contributor';
+  div.innerHTML = `
+    <button class="remove" onclick="this.parentElement.remove();render()">&times;</button>
+    <div class="row">
+      <input type="text" class="c-name" placeholder="username" value="${esc(name||'')}" oninput="render()">
+      <input type="number" class="c-commits" placeholder="0" min="0" value="${commits||0}" oninput="render()">
+    </div>
+    <div class="row">
+      <input type="hidden" class="c-avatar-src" value="${esc(avatarSrc||'')}">
+      <button class="btn avatar-btn" onclick="pickAvatar(this)">Avatar</button>
+      <img class="avatar-preview" src="${avatarSrc||''}" style="display:${avatarSrc?'':'none'}">
+      <span class="msg" style="font-size:11px">${esc(name||'')}</span>
+    </div>`;
+  document.getElementById('contributors').appendChild(div);
+  render();
+}
+
+function pickAvatar(btn) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const row = btn.closest('.row');
+      row.querySelector('.c-avatar-src').value = ev.target.result;
+      const img = row.querySelector('.avatar-preview');
+      img.src = ev.target.result;
+      img.style.display = '';
+      render();
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
+
+// --- Fetch from GitHub ---
+async function fetchRepo() {
+  const repo = document.getElementById('repoInput').value.trim();
+  const msg = document.getElementById('fetchMsg');
+  if (!repo || !repo.includes('/')) {
+    msg.className = 'msg error';
+    msg.textContent = 'Enter owner/repo';
+    return;
+  }
+  msg.className = 'msg';
+  msg.textContent = 'Fetching...';
+  try {
+    const resp = await fetch(`https://api.github.com/repos/${repo}/contributors?per_page=6`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    const users = data.filter(c => c.type === 'User');
+    document.getElementById('contributors').innerHTML = '';
+    for (const u of users) {
+      // Fetch avatar as base64
+      let avatarSrc = '';
+      try {
+        const imgResp = await fetch(`https://github.com/${u.login}.png?size=96`);
+        const blob = await imgResp.blob();
+        avatarSrc = await new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onload = e => resolve(e.target.result);
+          reader.readAsDataURL(blob);
+        });
+      } catch (_) {}
+      addContributor(u.login, u.contributions, avatarSrc);
+    }
+    msg.className = 'msg success';
+    msg.textContent = `Loaded ${users.length} contributors`;
+  } catch (e) {
+    msg.className = 'msg error';
+    msg.textContent = `Error: ${e.message}`;
+  }
+}
+
+// --- Export ---
+function downloadSVG() {
+  const config = getConfig();
+  const contributors = getContributors();
+  const svg = buildCompositeSVG(config, contributors);
+  const blob = new Blob([svg], { type: 'image/svg+xml' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'contributor-flag.svg';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function downloadPNG() {
+  const config = getConfig();
+  const contributors = getContributors();
+  const svg = buildCompositeSVG(config, contributors);
+  const canvas = document.createElement('canvas');
+  canvas.width = FLAG_W * 2;
+  canvas.height = FLAG_H * 2;
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+  const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  img.onload = () => {
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    URL.revokeObjectURL(url);
+    canvas.toBlob(pngBlob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(pngBlob);
+      a.download = 'contributor-flag.png';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }, 'image/png');
+  };
+  img.src = url;
+}
+
+// --- Init ---
+addContributor('contributor-1', 0, '');
+addContributor('contributor-2', 0, '');
+addContributor('contributor-3', 0, '');
+render();
+</script>
+</body>
+</html>
