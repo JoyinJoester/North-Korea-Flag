@@ -1,0 +1,65 @@
+name: 'North-Korea-Flag Contributor Flag'
+description: 'Generate a North-Korea-Flag flag SVG with contributor avatars for your README'
+
+inputs:
+  repo:
+    description: 'GitHub repository (owner/repo)'
+    required: false
+    default: ''
+  blue:
+    description: 'Blue stripe color (hex)'
+    required: false
+    default: '#024FA2'
+  red:
+    description: 'Red stripe color (hex)'
+    required: false
+    default: '#ED1C27'
+  white:
+    description: 'White color (hex)'
+    required: false
+    default: '#FFFFFF'
+  icon-url:
+    description: 'Project icon URL (replaces the star on the flag)'
+    required: false
+    default: ''
+  icon-scale:
+    description: 'Icon scale relative to the disc (0-1)'
+    required: false
+    default: '0.8'
+  count:
+    description: 'Number of top contributors to show'
+    required: false
+    default: '3'
+  output:
+    description: 'Output SVG path'
+    required: false
+    default: 'North-Korea-Flag/output.svg'
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Generate contributor SVG
+      shell: bash
+      run: |
+        python "North-Korea-Flag/generate.py" \
+          --repo "${{ inputs.repo || github.repository }}" \
+          --blue "${{ inputs.blue }}" \
+          --red "${{ inputs.red }}" \
+          --white "${{ inputs.white }}" \
+          --icon-url "${{ inputs.icon-url }}" \
+          --icon-scale "${{ inputs.icon-scale }}" \
+          --count "${{ inputs.count }}" \
+          --output "${{ inputs.output }}"
+
+    - name: Commit SVG if changed
+      shell: bash
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add "North-Korea-Flag/output.svg" "North-Korea-Flag/flag.svg"
+        git diff --cached --quiet || git commit -m "Update contributor flag SVG"
+        git push

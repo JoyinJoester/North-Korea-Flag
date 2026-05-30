@@ -1,0 +1,16 @@
+{
+  "repo": "",
+  "colors": {
+    "blue": "#024FA2",
+    "red": "#ED1C27",
+    "white": "#FFFFFF"
+  },
+  "icon": {
+    "url": "",
+    "scale": 0.8
+  },
+  "contributors": {
+    "count": 3,
+    "avatar_size": 96
+  }
+}
