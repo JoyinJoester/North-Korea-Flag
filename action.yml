@@ -33,7 +33,7 @@ inputs:
   output:
     description: 'Output SVG path'
     required: false
-    default: 'North-Korea-Flag/output.svg'
+    default: 'output.svg'
 
 runs:
   using: 'composite'
@@ -45,7 +45,7 @@ runs:
     - name: Generate contributor SVG
       shell: bash
       run: |
-        python "North-Korea-Flag/generate.py" \
+        python "${{ github.action_path }}/generate.py" \
           --repo "${{ inputs.repo || github.repository }}" \
           --blue "${{ inputs.blue }}" \
           --red "${{ inputs.red }}" \
@@ -60,6 +60,6 @@ runs:
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add "North-Korea-Flag/output.svg" "North-Korea-Flag/flag.svg"
+        git add "${{ inputs.output }}" "flag.svg"
         git diff --cached --quiet || git commit -m "Update contributor flag SVG"
         git push
