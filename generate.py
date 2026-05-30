@@ -14,6 +14,7 @@ No external dependencies — stdlib only.
 """
 
 import argparse
+import base64
 import json
 import math
 import os
@@ -101,6 +102,21 @@ def parse_args():
     return p.parse_args()
 
 
+def fetch_avatar(login, size=96):
+    """Download GitHub avatar and return as base64 data URI, or empty string on failure."""
+    url = f"https://github.com/{login}.png?size={size}"
+    req = urllib.request.Request(url, headers={"User-Agent": "north-korea-svg-gen"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = resp.read()
+            content_type = resp.headers.get("Content-Type", "image/png")
+        b64 = base64.b64encode(data).decode("ascii")
+        return f"data:{content_type};base64,{b64}"
+    except Exception as e:
+        print(f"Warning: failed to fetch avatar for {login}: {e}", file=sys.stderr)
+        return ""
+
+
 def fetch_contributors(repo, count=10):
     url = f"https://api.github.com/repos/{repo}/contributors?per_page={count}"
     req = urllib.request.Request(url, headers={"User-Agent": "north-korea-svg-gen"})
@@ -183,11 +199,13 @@ def _r(v):
     return round(v)
 
 
-def build_composite_svg(config, contributors):
+def build_composite_svg(config, contributors, avatars=None):
     c = config["colors"]
     flag_w, flag_h = 660, 400
     count = config["contributors"].get("count", 3)
     top = contributors[:count]
+    if avatars is None:
+        avatars = {}
 
     u = flag_h / 8
     red_top = u + u * 0.25       # 62.5
@@ -216,7 +234,9 @@ def build_composite_svg(config, contributors):
     for i, user in enumerate(top):
         cx = avatar_zone_left + slot_w * i + slot_w / 2
         cy = red_mid - 10
-        avatar_url = f"https://github.com/{_xml_escape(user['login'])}.png?size={avatar_size}"
+        avatar_data_uri = avatars.get(user["login"], "")
+        if not avatar_data_uri:
+            avatar_data_uri = f"https://github.com/{_xml_escape(user['login'])}.png?size={avatar_size}"
         commits_text = f"{user['contributions']:,}"
 
         profile_url = f"https://github.com/{_xml_escape(user['login'])}"
@@ -225,7 +245,7 @@ def build_composite_svg(config, contributors):
   <a href="{profile_url}" target="_blank">
   <circle cx="{_r(cx)}" cy="{_r(cy)}" r="{_r(avatar_r + 3)}" fill="{c['white']}" opacity="0.25"/>
   <clipPath id="clip{i}"><circle cx="{_r(cx)}" cy="{_r(cy)}" r="{_r(avatar_r)}"/></clipPath>
-  <image href="{_xml_escape(avatar_url)}"
+  <image href="{_xml_escape(avatar_data_uri)}"
          x="{_r(cx - avatar_r)}" y="{_r(cy - avatar_r)}"
          width="{avatar_size}" height="{avatar_size}"
          clip-path="url(#clip{i})"
@@ -278,6 +298,14 @@ def main():
             for i in range(count)
         ]
 
+    avatar_size = config["contributors"].get("avatar_size", 96)
+
+    # Download avatars as base64 data URIs for embedding in SVG
+    avatars = {}
+    for user in contributors[:count]:
+        print(f"  Fetching avatar for {user['login']}...")
+        avatars[user["login"]] = fetch_avatar(user["login"], avatar_size)
+
     # Write standalone flag
     with open(config["flag_output"], "w", encoding="utf-8") as f:
         f.write(build_flag_svg(config))
@@ -285,7 +313,7 @@ def main():
 
     # Write composite
     with open(config["output"], "w", encoding="utf-8") as f:
-        f.write(build_composite_svg(config, contributors))
+        f.write(build_composite_svg(config, contributors, avatars))
     print(f"Wrote {config['output']}")
 
     for user in contributors[:count]:
